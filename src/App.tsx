@@ -82,11 +82,6 @@ function App() {
           Logout
         </button>
       </div>
-
-      <p style={{ fontSize: "12px", color: "#666" }}>
-        Note: The transaction sends 0.0001 ETH to a test address. Make sure you
-        have sufficient balance and are connected to the right network.
-      </p>
     </div>
   );
 }

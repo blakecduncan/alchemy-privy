@@ -10,7 +10,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <SmartWalletsProvider
       apiKey={import.meta.env.VITE_ALCHEMY_API_KEY}
-      policyId={import.meta.env.VITE_POLICY_ID}
+      policyId={import.meta.env.VITE_ALCHEMY_POLICY_ID}
     >
       <PrivyProvider
         appId={import.meta.env.VITE_PRIVY_APP_ID}
