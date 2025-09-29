@@ -10,8 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@account-kit/infra": "^4.40.0",
-    "@account-kit/smart-contracts": "^4.40.0",
+    "@aa-sdk/core": "^4.65.0",
+    "@account-kit/infra": "^4.65.0",
+    "@account-kit/wallet-client": "^4.65.0",
     "@privy-io/react-auth": "^2.14.1",
     "@tanstack/react-query": "^5.80.7",
     "react": "^19.1.0",
@@ -29,5 +30,6 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
     "vite": "^6.3.5"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

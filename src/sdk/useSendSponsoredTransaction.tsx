@@ -1,16 +1,30 @@
+import { WalletClientSigner, type AuthorizationRequest } from "@aa-sdk/core";
 import {
-  type UserOperationCallData,
-  type BatchUserOperationCallData,
-  WalletClientSigner,
-  type SmartAccountSigner,
-} from "@aa-sdk/core";
-import { createWalletClient, custom, type Hex, type Hash } from "viem";
-import { useWallets, useSignAuthorization } from "@privy-io/react-auth";
-import { createModularAccountV2Client } from "@account-kit/smart-contracts";
+  createWalletClient,
+  custom,
+  type Address,
+  type Hash,
+  type Authorization,
+} from "viem";
+import {
+  useWallets,
+  useSignAuthorization,
+  type ConnectedWallet as PrivyWallet,
+} from "@privy-io/react-auth";
+import {
+  createSmartWalletClient,
+  type SmartWalletClient,
+} from "@account-kit/wallet-client";
 import { alchemy } from "@account-kit/infra";
 import { useSmartWalletsConfig } from "./Provider";
 import { useCallback, useRef, useState } from "react";
 import { getChain } from "./getChain";
+
+export type CallData = {
+  to: Address;
+  data?: `0x${string}`;
+  value?: `0x${string}`;
+};
 
 export function useSendSponsoredTransaction() {
   const { wallets } = useWallets();
@@ -22,72 +36,109 @@ export function useSendSponsoredTransaction() {
   const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<Hash | null>(null);
 
-  // cache signer instance – avoids walletClient re‑creation
-  const signerRef = useRef<SmartAccountSigner | null>(null);
+  // cache client instance – avoids re‑creation
+  const clientRef = useRef<SmartWalletClient | null>(null);
 
-  const getEmbeddedWalletChain = useCallback(() => {
+  const getEmbeddedWallet = useCallback((): PrivyWallet => {
     const embedded = wallets.find((w) => w.walletClientType === "privy");
     if (!embedded) throw new Error("Embedded wallet not ready");
+    return embedded;
+  }, [wallets]);
+
+  const getEmbeddedWalletChain = useCallback(() => {
+    const embedded = getEmbeddedWallet();
     // Handle CAIP-2 format like "eip155:1"
     const chainIdStr = embedded.chainId?.toString();
     const numericChainId = chainIdStr?.includes(":")
       ? chainIdStr.split(":")[1]
       : chainIdStr;
     return getChain(Number(numericChainId));
-  }, [wallets]);
+  }, [getEmbeddedWallet]);
 
-  const getSigner = useCallback(async () => {
-    if (signerRef.current) return signerRef.current;
+  const getClient = useCallback(async (): Promise<SmartWalletClient> => {
+    if (clientRef.current) return clientRef.current;
 
-    const embedded = wallets.find((w) => w.walletClientType === "privy");
-    if (!embedded) throw new Error("Embedded wallet not ready");
-
+    const embeddedWallet = getEmbeddedWallet();
     const chain = getEmbeddedWalletChain();
+    const provider = await embeddedWallet.getEthereumProvider();
 
     const baseSigner = new WalletClientSigner(
       createWalletClient({
-        account: embedded.address as Hex,
+        account: embeddedWallet.address as Address,
         chain,
-        transport: custom(await embedded.getEthereumProvider()),
+        transport: custom(provider),
       }),
       "privy"
     );
 
-    signerRef.current = {
+    const signer = {
       ...baseSigner,
-      // bridge Privy's signAuthorization into AA‑SDK
-      signAuthorization: async (unsigned) =>
-        // Privy returns ecsign‑style { signature } object
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await signAuthorization(unsigned as any),
+      signAuthorization: async (
+        unsignedAuth: AuthorizationRequest<number>
+      ): Promise<Authorization<number, true>> => {
+        const signature = await signAuthorization({
+          ...unsignedAuth,
+          contractAddress: unsignedAuth.address ?? unsignedAuth.contractAddress,
+        });
+
+        return {
+          ...unsignedAuth,
+          ...signature,
+        };
+      },
     };
-    return signerRef.current;
-  }, [wallets, signAuthorization, getEmbeddedWalletChain]);
+
+    clientRef.current = createSmartWalletClient({
+      chain,
+      transport: alchemy({
+        apiKey: cfg.apiKey,
+      }),
+      signer,
+      policyId: cfg.policyId,
+    });
+
+    return clientRef.current;
+  }, [
+    getEmbeddedWallet,
+    getEmbeddedWalletChain,
+    signAuthorization,
+    cfg.apiKey,
+    cfg.policyId,
+  ]);
 
   const sendSponsoredTransaction = useCallback(
-    async (
-      uo: UserOperationCallData | BatchUserOperationCallData
-    ): Promise<Hash> => {
+    async (calls: CallData | CallData[]): Promise<Hash> => {
       setIsLoading(true);
       setError(null);
 
-      const chain = getEmbeddedWalletChain();
-
       try {
-        const signer = await getSigner();
-        const sac = await createModularAccountV2Client({
-          mode: "7702",
-          transport: alchemy({ apiKey: cfg.apiKey }),
-          chain,
-          signer,
-          policyId: cfg.policyId,
+        const client = await getClient();
+        const embeddedWallet = getEmbeddedWallet();
+
+        // Normalize calls to array format
+        const callsArray = Array.isArray(calls) ? calls : [calls];
+
+        // Send the calls with gas sponsorship
+        const result = await client.sendCalls({
+          from: embeddedWallet.address as Address,
+          calls: callsArray,
+          capabilities: {
+            eip7702Auth: true,
+            paymasterService: {
+              policyId: cfg.policyId,
+            },
+          },
         });
 
-        const uoHash = await sac.sendUserOperation({ uo });
-        const result = await sac.waitForUserOperationTransaction(uoHash);
+        // Get the transaction hash from the result
+        const txHash = await client.waitForCallsStatus({
+          id: result.preparedCallIds[0],
+          timeout: 60_000,
+        });
 
-        setData(result);
-        return result;
+        const hash = txHash.receipts?.[0]?.transactionHash as Hash;
+        setData(hash);
+        return hash;
       } catch (err) {
         const error =
           err instanceof Error ? err : new Error("Transaction failed");
@@ -97,7 +148,7 @@ export function useSendSponsoredTransaction() {
         setIsLoading(false);
       }
     },
-    [getSigner, cfg.apiKey, cfg.policyId, getEmbeddedWalletChain]
+    [getClient, getEmbeddedWallet, cfg.policyId]
   );
 
   const reset = useCallback(() => {

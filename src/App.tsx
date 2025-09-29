@@ -18,8 +18,8 @@ function App() {
   const handleSendTransaction = async () => {
     try {
       const txnHash = await sendSponsoredTransaction({
-        target: zeroAddress,
-        value: 0n,
+        to: zeroAddress,
+        value: "0x00",
         data: "0x",
       });
 
