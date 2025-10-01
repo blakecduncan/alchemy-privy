@@ -2,6 +2,16 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules, integrated with Privy authentication and Alchemy Smart Wallets using EIP-7702.
 
+## Features
+
+- **Smart Wallets with EIP-7702**: Upgrade EOAs to smart wallets without transferring assets
+- **Gas Sponsorship**: Transactions are sponsored through Alchemy's gas policy
+- **Flexible Value Format**: Transaction values can be specified as:
+  - `bigint`: `123n`
+  - `number`: `123`
+  - `hex string`: `"0x7b"`
+  - `decimal string`: `"123"`
+
 ## Setup
 
 1. Copy `env.example` to `.env` and fill in your credentials:

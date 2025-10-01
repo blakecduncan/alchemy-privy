@@ -19,11 +19,12 @@ import { alchemy } from "@account-kit/infra";
 import { useSmartWalletsConfig } from "./Provider";
 import { useCallback, useRef, useState } from "react";
 import { getChain } from "./getChain";
+import { toHex } from "viem";
 
 export type CallData = {
   to: Address;
   data?: `0x${string}`;
-  value?: `0x${string}`;
+  value?: string | number | bigint;
 };
 
 export function useSendSponsoredTransaction() {
@@ -115,13 +116,18 @@ export function useSendSponsoredTransaction() {
         const client = await getClient();
         const embeddedWallet = getEmbeddedWallet();
 
-        // Normalize calls to array format
+        // Normalize calls to array format and convert values to hex
         const callsArray = Array.isArray(calls) ? calls : [calls];
+        const formattedCalls = callsArray.map((call) => ({
+          to: call.to,
+          data: call.data,
+          value: toHex(call.value ?? 0n),
+        }));
 
         // Send the calls with gas sponsorship
         const result = await client.sendCalls({
           from: embeddedWallet.address as Address,
-          calls: callsArray,
+          calls: formattedCalls,
           capabilities: {
             eip7702Auth: true,
             paymasterService: {

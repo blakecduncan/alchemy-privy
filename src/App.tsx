@@ -1,6 +1,5 @@
 import "./App.css";
-import { usePrivy } from "@privy-io/react-auth";
-import { useLogin } from "@privy-io/react-auth";
+import { usePrivy, useLogin } from "@privy-io/react-auth";
 import { useSendSponsoredTransaction } from "./sdk/useSendSponsoredTransaction";
 import { zeroAddress } from "viem";
 
@@ -17,11 +16,11 @@ function App() {
 
   const handleSendTransaction = async () => {
     try {
-      const txnHash = await sendSponsoredTransaction({
+      const txnHash = await sendSponsoredTransaction([{
         to: zeroAddress,
-        value: "0x00",
+        value: 0n,
         data: "0x",
-      });
+      }]);
 
       alert(`Transaction sent: ${txnHash}`);
     } catch (error) {
