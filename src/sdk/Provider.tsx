@@ -1,26 +1,36 @@
 import { type PropsWithChildren, createContext, useContext } from "react";
+import type { AlchemyProviderConfig } from "./types";
 
-export interface SmartWalletsConfig {
-  apiKey: string;
-  policyId: string;
-}
+const AlchemyContext = createContext<AlchemyProviderConfig | null>(null);
 
-const SmartWalletsCtx = createContext<SmartWalletsConfig | null>(null);
-
-export function SmartWalletsProvider({
+/**
+ * Provider component for Alchemy configuration
+ * Wraps your app to provide Alchemy settings to hooks
+ *
+ * @example
+ * ```tsx
+ * <AlchemyProvider apiKey="your-api-key" policyId="your-policy-id">
+ *   <App />
+ * </AlchemyProvider>
+ * ```
+ */
+export function AlchemyProvider({
   children,
   ...config
-}: PropsWithChildren<SmartWalletsConfig>) {
+}: PropsWithChildren<AlchemyProviderConfig>) {
   return (
-    <SmartWalletsCtx.Provider value={config}>
-      {children}
-    </SmartWalletsCtx.Provider>
+    <AlchemyContext.Provider value={config}>{children}</AlchemyContext.Provider>
   );
 }
 
-// handy helper so consumer code is tiny
-export function useSmartWalletsConfig() {
-  const ctx = useContext(SmartWalletsCtx);
-  if (!ctx) throw new Error("Missing <SmartWalletsProvider/>");
-  return ctx;
+/**
+ * Hook to access Alchemy configuration
+ * @internal
+ */
+export function useAlchemyConfig(): AlchemyProviderConfig {
+  const context = useContext(AlchemyContext);
+  if (!context) {
+    throw new Error("useAlchemyConfig must be used within <AlchemyProvider />");
+  }
+  return context;
 }

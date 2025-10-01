@@ -1,5 +1,15 @@
-export { SmartWalletsProvider, useSmartWalletsConfig } from "./Provider";
-export type { SmartWalletsConfig } from "./Provider";
+// Provider
+export { AlchemyProvider, useAlchemyConfig } from "./Provider";
 
-export { useSendSponsoredTransaction } from "./useSendSponsoredTransaction";
-export type { CallData } from "./useSendSponsoredTransaction";
+// Hooks
+export { useAlchemyClient } from "./useAlchemyClient";
+export { useAlchemySendTransaction } from "./useAlchemySendTransaction";
+
+// Types
+export type {
+  AlchemyProviderConfig,
+  UnsignedTransactionRequest,
+  SendTransactionOptions,
+  SendTransactionResult,
+  UseSendTransactionResult,
+} from "./types";

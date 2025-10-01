@@ -1,10 +1,10 @@
 import "./App.css";
 import { usePrivy, useLogin } from "@privy-io/react-auth";
-import { useSendSponsoredTransaction } from "./sdk/useSendSponsoredTransaction";
+import { useAlchemySendTransaction } from "./sdk";
 import { zeroAddress } from "viem";
 
 function App() {
-  const { sendSponsoredTransaction } = useSendSponsoredTransaction();
+  const { sendTransaction, isLoading } = useAlchemySendTransaction();
 
   const { ready, authenticated, user, logout } = usePrivy();
   const { login } = useLogin();
@@ -16,13 +16,13 @@ function App() {
 
   const handleSendTransaction = async () => {
     try {
-      const txnHash = await sendSponsoredTransaction([{
+      const result = await sendTransaction({
         to: zeroAddress,
         value: 0n,
         data: "0x",
-      }]);
+      });
 
-      alert(`Transaction sent: ${txnHash}`);
+      alert(`Transaction sent: ${result.txnHash}`);
     } catch (error) {
       console.error("Transaction failed:", error);
     }
@@ -54,17 +54,19 @@ function App() {
       <div style={{ marginBottom: "20px" }}>
         <button
           onClick={handleSendTransaction}
+          disabled={isLoading}
           style={{
             padding: "12px 24px",
-            backgroundColor: "#17a2b8",
+            backgroundColor: isLoading ? "#6c757d" : "#17a2b8",
             color: "white",
             border: "none",
             borderRadius: "4px",
             marginRight: "10px",
             fontSize: "16px",
+            cursor: isLoading ? "not-allowed" : "pointer",
           }}
         >
-          Send Transaction
+          {isLoading ? "Sending..." : "Send Transaction"}
         </button>
 
         <button
