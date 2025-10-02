@@ -1,4 +1,5 @@
-import "./App.css";
+"use client";
+
 import { usePrivy, useLogin } from "@privy-io/react-auth";
 import {
   useAlchemySendTransaction,
@@ -10,6 +11,7 @@ import {
   createPublicClient,
   http,
   formatEther,
+  formatUnits,
   parseEther,
   isAddress,
   type Address,
@@ -18,17 +20,69 @@ import {
 import { baseSepolia, base } from "viem/chains";
 import { useEffect, useState } from "react";
 import { useWallets } from "@privy-io/react-auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, ArrowDownUp, Send, LogOut, Wallet } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { toast, Toaster } from "sonner";
 
-function App() {
+// ERC20 ABI for balanceOf function
+const ERC20_ABI = [
+  {
+    constant: true,
+    inputs: [{ name: "_owner", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ name: "balance", type: "uint256" }],
+    type: "function",
+  },
+] as const;
+
+export default function App() {
   const { sendTransaction, isLoading } = useAlchemySendTransaction();
   const prepareSwap = useAlchemyPrepareSwap();
   const submitSwap = useAlchemySubmitSwap();
   const { wallets } = useWallets();
 
   const [balance, setBalance] = useState<string | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
+  const [wethBalance, setWethBalance] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [currentChain, setCurrentChain] = useState<number>(baseSepolia.id);
   const [isSwitchingChain, setIsSwitchingChain] = useState(false);
+
+  // Token addresses - chain specific
+  const TOKEN_ADDRESSES: Record<
+    number,
+    { USDC: string; WETH: string } | undefined
+  > = {
+    [base.id]: {
+      USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      WETH: "0x4200000000000000000000000000000000000006",
+    },
+    [baseSepolia.id]: {
+      USDC: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      WETH: "0x4200000000000000000000000000000000000006",
+    },
+  };
+
+  const USDC_ADDRESS = TOKEN_ADDRESSES[currentChain]?.USDC;
+  const WETH_ADDRESS = TOKEN_ADDRESSES[currentChain]?.WETH;
 
   // Send transaction form state
   const [recipientAddress, setRecipientAddress] = useState("");
@@ -38,7 +92,7 @@ function App() {
   // Swap form state
   const [fromToken, setFromToken] = useState(
     "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-  ); // ETH
+  );
   const [toToken, setToToken] = useState(
     "0x4200000000000000000000000000000000000006"
   );
@@ -51,46 +105,96 @@ function App() {
   const { login } = useLogin();
   const disableLogin = !ready || (ready && authenticated);
 
-  // Fetch balance when authenticated or chain changes
+  // Fetch balances when authenticated or chain changes
   useEffect(() => {
-    const fetchBalance = async () => {
+    const fetchBalances = async () => {
       if (!authenticated || !user?.wallet?.address) {
         setBalance(null);
+        setUsdcBalance(null);
+        setWethBalance(null);
         return;
       }
 
       setIsLoadingBalance(true);
       try {
-        // Use the current chain instead of hardcoded baseSepolia
         const chain = currentChain === base.id ? base : baseSepolia;
-
+        console.log("chain", chain);
         const publicClient = createPublicClient({
           chain,
           transport: http(),
         });
 
+        // Fetch ETH balance
         const balanceWei = await publicClient.getBalance({
           address: user.wallet.address as Address,
         });
-
+        console.log("balanceWei", balanceWei);
         setBalance(formatEther(balanceWei));
+
+        // Fetch USDC balance
+        if (USDC_ADDRESS) {
+          try {
+            const usdcBalanceWei = await publicClient.readContract({
+              address: USDC_ADDRESS as Address,
+              abi: ERC20_ABI,
+              functionName: "balanceOf",
+              args: [user.wallet.address as Address],
+            });
+            // USDC uses 6 decimals
+            setUsdcBalance(formatUnits(usdcBalanceWei as bigint, 6));
+          } catch (error) {
+            console.error("Failed to fetch USDC balance:", error);
+            setUsdcBalance("0");
+          }
+        } else {
+          setUsdcBalance("N/A");
+        }
+
+        // Fetch WETH balance
+        if (WETH_ADDRESS) {
+          try {
+            const wethBalanceWei = await publicClient.readContract({
+              address: WETH_ADDRESS as Address,
+              abi: ERC20_ABI,
+              functionName: "balanceOf",
+              args: [user.wallet.address as Address],
+            });
+            setWethBalance(formatEther(wethBalanceWei as bigint));
+          } catch (error) {
+            console.error("Failed to fetch WETH balance:", error);
+            setWethBalance("0");
+          }
+        } else {
+          setWethBalance("N/A");
+        }
       } catch (error) {
-        console.error("Failed to fetch balance:", error);
+        console.error("Failed to fetch balances:", error);
         setBalance("Error");
+        setUsdcBalance("Error");
+        setWethBalance("Error");
       } finally {
         setIsLoadingBalance(false);
       }
     };
 
-    fetchBalance();
-  }, [authenticated, user?.wallet?.address, currentChain]);
+    fetchBalances();
+  }, [
+    authenticated,
+    user?.wallet?.address,
+    currentChain,
+    USDC_ADDRESS,
+    WETH_ADDRESS,
+  ]);
 
   if (!ready) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   const handleSendTransaction = async () => {
-    // Validate address
     if (!recipientAddress) {
       setAddressError("Address is required");
       return;
@@ -103,9 +207,8 @@ function App() {
 
     setAddressError("");
 
-    // Validate amount
-    if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount greater than 0");
+    if (!amount || Number.parseFloat(amount) <= 0) {
+      toast.error("Please enter a valid amount greater than 0");
       return;
     }
 
@@ -116,14 +219,13 @@ function App() {
         data: "0x",
       });
 
-      alert(`Transaction sent: ${result.txnHash}`);
+      toast.success(`Transaction sent: ${result.txnHash}`);
 
-      // Clear form after successful transaction
       setRecipientAddress("");
       setAmount("0.001");
     } catch (error) {
       console.error("Transaction failed:", error);
-      alert(
+      toast.error(
         `Transaction failed: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
@@ -133,12 +235,12 @@ function App() {
 
   const handlePrepareSwap = async () => {
     if (!toToken || !isAddress(toToken)) {
-      alert("Please enter a valid token address");
+      toast.error("Please enter a valid token address");
       return;
     }
 
-    if (!swapAmount || parseFloat(swapAmount) <= 0) {
-      alert("Please enter a valid amount");
+    if (!swapAmount || Number.parseFloat(swapAmount) <= 0) {
+      toast.error("Please enter a valid amount");
       return;
     }
 
@@ -150,9 +252,10 @@ function App() {
       });
 
       setPreparedSwap(result);
+      toast.success("Swap quote prepared successfully");
     } catch (error) {
       console.error("Failed to prepare swap:", error);
-      alert(
+      toast.error(
         `Failed to prepare swap: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
@@ -165,9 +268,8 @@ function App() {
 
     try {
       const result = await submitSwap.submitSwap(preparedSwap.preparedCalls);
-      alert(`Swap successful! Transaction: ${result.txnHash}`);
+      toast.success(`Swap successful! Transaction: ${result.txnHash}`);
 
-      // Reset form
       setPreparedSwap(null);
       setToToken("");
       setSwapAmount("0.001");
@@ -175,7 +277,7 @@ function App() {
       submitSwap.reset();
     } catch (error) {
       console.error("Swap failed:", error);
-      alert(
+      toast.error(
         `Swap failed: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
@@ -189,25 +291,26 @@ function App() {
     submitSwap.reset();
   };
 
-  const handleChainSwitch = async (chainId: number) => {
+  const handleChainSwitch = async (chainId: string) => {
     const wallet = wallets.find((w) => w.walletClientType === "privy");
     if (!wallet) {
-      alert("No wallet found");
+      toast.error("No wallet found");
       return;
     }
 
+    const numChainId = Number(chainId);
     setIsSwitchingChain(true);
     try {
-      await wallet.switchChain(chainId);
-      setCurrentChain(chainId);
-      alert(
+      await wallet.switchChain(numChainId);
+      setCurrentChain(numChainId);
+      toast.success(
         `Successfully switched to ${
-          chainId === base.id ? "Base" : "Base Sepolia"
+          numChainId === base.id ? "Base" : "Base Sepolia"
         }`
       );
     } catch (error) {
       console.error("Failed to switch chain:", error);
-      alert(
+      toast.error(
         `Failed to switch chain: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
@@ -219,344 +322,369 @@ function App() {
 
   if (!authenticated) {
     return (
-      <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
-        <h1>Login with Privy</h1>
-        <button disabled={disableLogin} onClick={login}>
-          Log in
-        </button>
-      </div>
+      <>
+        <Toaster richColors position="top-right" />
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Welcome to DeFi App</CardTitle>
+              <CardDescription>
+                Connect your wallet to get started
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                disabled={disableLogin}
+                onClick={login}
+                className="w-full"
+                size="lg"
+              >
+                <Wallet className="mr-2 h-5 w-5" />
+                Connect Wallet
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     );
   }
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Welcome!</h1>
+    <>
+      <Toaster richColors position="top-right" />
+      <div className="min-h-screen bg-background p-4 md:p-8">
+        <div className="mx-auto max-w-7xl space-y-6">
+          {/* Header */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-3xl font-bold tracking-tight">
+              DeFi Dashboard
+            </h1>
 
-        {/* Chain Switcher */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <label htmlFor="chainSelect" style={{ fontWeight: "500" }}>
-            Network:
-          </label>
-          <select
-            id="chainSelect"
-            value={currentChain}
-            onChange={(e) => handleChainSwitch(Number(e.target.value))}
-            disabled={isSwitchingChain}
-            style={{
-              padding: "8px 12px",
-              fontSize: "14px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-              backgroundColor: isSwitchingChain ? "#f0f0f0" : "white",
-              color: "#333",
-              cursor: isSwitchingChain ? "not-allowed" : "pointer",
-            }}
-          >
-            <option value={baseSepolia.id}>Base Sepolia</option>
-            <option value={base.id}>Base</option>
-          </select>
-          {isSwitchingChain && (
-            <span style={{ fontSize: "14px", color: "#666" }}>
-              Switching...
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: "20px" }}>
-        <p>
-          <strong>Email:</strong> {user?.email?.address}
-        </p>
-        <p>
-          <strong>Wallet:</strong> {user?.wallet?.address}
-        </p>
-        <p>
-          <strong>Balance:</strong>{" "}
-          {isLoadingBalance
-            ? "Loading..."
-            : balance
-            ? `${parseFloat(balance).toFixed(4)} ETH`
-            : "—"}
-        </p>
-      </div>
-
-      <div style={{ marginBottom: "20px" }}>
-        <h3 style={{ marginBottom: "10px" }}>Send Transaction</h3>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            htmlFor="recipient"
-            style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
-          >
-            Recipient Address:
-          </label>
-          <input
-            id="recipient"
-            type="text"
-            value={recipientAddress}
-            onChange={(e) => {
-              setRecipientAddress(e.target.value);
-              setAddressError("");
-            }}
-            placeholder="0x..."
-            style={{
-              width: "100%",
-              padding: "10px",
-              fontSize: "14px",
-              borderRadius: "4px",
-              border: addressError ? "2px solid #dc3545" : "1px solid #ccc",
-              boxSizing: "border-box",
-            }}
-          />
-          {addressError && (
-            <p style={{ color: "#dc3545", fontSize: "14px", marginTop: "5px" }}>
-              {addressError}
-            </p>
-          )}
-        </div>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            htmlFor="amount"
-            style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
-          >
-            Amount (ETH):
-          </label>
-          <input
-            id="amount"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.001"
-            step="0.001"
-            min="0"
-            style={{
-              width: "100%",
-              padding: "10px",
-              fontSize: "14px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-
-        <button
-          onClick={handleSendTransaction}
-          disabled={isLoading}
-          style={{
-            padding: "12px 24px",
-            backgroundColor: isLoading ? "#6c757d" : "#17a2b8",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            marginRight: "10px",
-            fontSize: "16px",
-            cursor: isLoading ? "not-allowed" : "pointer",
-          }}
-        >
-          {isLoading ? "Sending..." : "Send Transaction"}
-        </button>
-
-        <button
-          onClick={logout}
-          style={{
-            padding: "12px 24px",
-            backgroundColor: "#dc3545",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            fontSize: "16px",
-          }}
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* Swap Section */}
-      <div style={{ marginBottom: "20px", marginTop: "30px" }}>
-        <h3 style={{ marginBottom: "10px" }}>Token Swap</h3>
-
-        {!preparedSwap ? (
-          <>
-            <div style={{ marginBottom: "15px" }}>
-              <label
-                htmlFor="fromToken"
-                style={{
-                  display: "block",
-                  marginBottom: "5px",
-                  fontWeight: "500",
-                }}
+            <div className="flex items-center gap-3">
+              <Label htmlFor="network-select" className="text-sm font-medium">
+                Network
+              </Label>
+              <Select
+                value={currentChain.toString()}
+                onValueChange={handleChainSwitch}
+                disabled={isSwitchingChain}
               >
-                From Token:
-              </label>
-              <input
-                id="fromToken"
-                type="text"
-                value={fromToken}
-                onChange={(e) => setFromToken(e.target.value)}
-                placeholder="0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  fontSize: "14px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  boxSizing: "border-box",
-                }}
-              />
-              <small style={{ color: "#666", fontSize: "12px" }}>
-                ETH: 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
-              </small>
+                <SelectTrigger id="network-select" className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={baseSepolia.id.toString()}>
+                    Base Sepolia
+                  </SelectItem>
+                  <SelectItem value={base.id.toString()}>Base</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-
-            <div style={{ marginBottom: "15px" }}>
-              <label
-                htmlFor="toToken"
-                style={{
-                  display: "block",
-                  marginBottom: "5px",
-                  fontWeight: "500",
-                }}
-              >
-                To Token:
-              </label>
-              <input
-                id="toToken"
-                type="text"
-                value={toToken}
-                onChange={(e) => setToToken(e.target.value)}
-                placeholder="0x..."
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  fontSize: "14px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  boxSizing: "border-box",
-                }}
-              />
-              <small style={{ color: "#666", fontSize: "12px" }}>
-                USDC (Base Sepolia): 0x036CbD53842c5426634e7929541eC2318f3dCF7e
-              </small>
-            </div>
-
-            <div style={{ marginBottom: "15px" }}>
-              <label
-                htmlFor="swapAmount"
-                style={{
-                  display: "block",
-                  marginBottom: "5px",
-                  fontWeight: "500",
-                }}
-              >
-                Amount:
-              </label>
-              <input
-                id="swapAmount"
-                type="number"
-                value={swapAmount}
-                onChange={(e) => setSwapAmount(e.target.value)}
-                placeholder="0.001"
-                step="0.001"
-                min="0"
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  fontSize: "14px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-
-            <button
-              onClick={handlePrepareSwap}
-              disabled={prepareSwap.isLoading}
-              style={{
-                padding: "12px 24px",
-                backgroundColor: prepareSwap.isLoading ? "#6c757d" : "#28a745",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                fontSize: "16px",
-                cursor: prepareSwap.isLoading ? "not-allowed" : "pointer",
-              }}
-            >
-              {prepareSwap.isLoading ? "Getting Quote..." : "Get Swap Quote"}
-            </button>
-          </>
-        ) : (
-          <div
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              padding: "15px",
-              backgroundColor: "#f8f9fa",
-            }}
-          >
-            <h4 style={{ marginTop: 0, marginBottom: "10px" }}>Swap Quote</h4>
-            <p style={{ margin: "5px 0" }}>
-              <strong>From Amount:</strong>{" "}
-              {formatEther(BigInt(preparedSwap.quote.fromAmount))} tokens
-            </p>
-            <p style={{ margin: "5px 0" }}>
-              <strong>Minimum You'll Receive:</strong>{" "}
-              {formatEther(BigInt(preparedSwap.quote.minimumToAmount))} tokens
-            </p>
-            <p style={{ margin: "5px 0", marginBottom: "15px" }}>
-              <strong>Expires:</strong>{" "}
-              {new Date(
-                parseInt(preparedSwap.quote.expiry, 16) * 1000
-              ).toLocaleString()}
-            </p>
-
-            <button
-              onClick={handleExecuteSwap}
-              disabled={submitSwap.isLoading}
-              style={{
-                padding: "12px 24px",
-                backgroundColor: submitSwap.isLoading ? "#6c757d" : "#28a745",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                marginRight: "10px",
-                fontSize: "16px",
-                cursor: submitSwap.isLoading ? "not-allowed" : "pointer",
-              }}
-            >
-              {submitSwap.isLoading ? "Executing..." : "Confirm Swap"}
-            </button>
-
-            <button
-              onClick={handleCancelSwap}
-              disabled={submitSwap.isLoading}
-              style={{
-                padding: "12px 24px",
-                backgroundColor: "#6c757d",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                fontSize: "16px",
-                cursor: submitSwap.isLoading ? "not-allowed" : "pointer",
-              }}
-            >
-              Cancel
-            </button>
           </div>
-        )}
+
+          {/* Two-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left column - Account Info */}
+            <div className="lg:col-span-1">
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="text-lg">Account Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-muted-foreground">Email</span>
+                    <span className="font-mono text-sm">
+                      {user?.email?.address}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      Wallet Address
+                    </span>
+                    <span className="font-mono text-sm break-all">
+                      {user?.wallet?.address}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      ETH Balance
+                    </span>
+                    <span className="text-lg font-semibold">
+                      {isLoadingBalance ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading...
+                        </span>
+                      ) : balance ? (
+                        `${Number.parseFloat(balance).toFixed(6)} ETH`
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      USDC Balance
+                    </span>
+                    <span className="text-lg font-semibold">
+                      {isLoadingBalance ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading...
+                        </span>
+                      ) : usdcBalance ? (
+                        `${Number.parseFloat(usdcBalance).toFixed(2)} USDC`
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      WETH Balance
+                    </span>
+                    <span className="text-lg font-semibold">
+                      {isLoadingBalance ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading...
+                        </span>
+                      ) : wethBalance ? (
+                        `${Number.parseFloat(wethBalance).toFixed(6)} WETH`
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                  </div>
+                  <Separator />
+                  <Button
+                    onClick={logout}
+                    variant="destructive"
+                    className="w-full mt-4"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right column - Transaction cards */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Send Transaction Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Send className="h-5 w-5" />
+                    Send Transaction
+                  </CardTitle>
+                  <CardDescription>
+                    Transfer ETH to another address
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="recipient">Recipient Address</Label>
+                    <Input
+                      id="recipient"
+                      type="text"
+                      value={recipientAddress}
+                      onChange={(e) => {
+                        setRecipientAddress(e.target.value);
+                        setAddressError("");
+                      }}
+                      placeholder="0x..."
+                      className={addressError ? "border-destructive" : ""}
+                    />
+                    {addressError && (
+                      <p className="text-sm text-destructive">{addressError}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount (ETH)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.001"
+                      step="0.001"
+                      min="0"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleSendTransaction}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" />
+                        Send Transaction
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Token Swap Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ArrowDownUp className="h-5 w-5" />
+                    Token Swap
+                  </CardTitle>
+                  <CardDescription>
+                    Swap tokens on Base network (mainnet only)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!preparedSwap ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="fromToken">From Token</Label>
+                        <Input
+                          id="fromToken"
+                          type="text"
+                          value={fromToken}
+                          onChange={(e) => setFromToken(e.target.value)}
+                          placeholder="0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+                          className="font-mono text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          ETH: 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="toToken">To Token</Label>
+                        <Input
+                          id="toToken"
+                          type="text"
+                          value={toToken}
+                          onChange={(e) => setToToken(e.target.value)}
+                          placeholder="0x..."
+                          className="font-mono text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          USDC (Base Sepolia):
+                          0x036CbD53842c5426634e7929541eC2318f3dCF7e
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="swapAmount">Amount</Label>
+                        <Input
+                          id="swapAmount"
+                          type="number"
+                          value={swapAmount}
+                          onChange={(e) => setSwapAmount(e.target.value)}
+                          placeholder="0.001"
+                          step="0.001"
+                          min="0"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handlePrepareSwap}
+                        disabled={prepareSwap.isLoading}
+                        className="w-full"
+                      >
+                        {prepareSwap.isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Getting Quote...
+                          </>
+                        ) : (
+                          "Get Swap Quote"
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <Alert>
+                        <AlertDescription className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm font-medium">
+                              From Amount:
+                            </span>
+                            <span className="font-mono text-sm">
+                              {formatEther(
+                                BigInt(preparedSwap.quote.fromAmount)
+                              )}{" "}
+                              tokens
+                            </span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between">
+                            <span className="text-sm font-medium">
+                              Minimum You'll Receive:
+                            </span>
+                            <span className="font-mono text-sm">
+                              {formatEther(
+                                BigInt(preparedSwap.quote.minimumToAmount)
+                              )}{" "}
+                              tokens
+                            </span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between">
+                            <span className="text-sm font-medium">
+                              Expires:
+                            </span>
+                            <span className="text-sm">
+                              {new Date(
+                                Number.parseInt(preparedSwap.quote.expiry, 16) *
+                                  1000
+                              ).toLocaleString()}
+                            </span>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={handleExecuteSwap}
+                          disabled={submitSwap.isLoading}
+                          className="flex-1"
+                        >
+                          {submitSwap.isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Executing...
+                            </>
+                          ) : (
+                            "Confirm Swap"
+                          )}
+                        </Button>
+
+                        <Button
+                          onClick={handleCancelSwap}
+                          disabled={submitSwap.isLoading}
+                          variant="outline"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
-
-export default App;
