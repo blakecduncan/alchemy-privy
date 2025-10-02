@@ -78,3 +78,125 @@ export interface UseSendTransactionResult {
     options?: SendTransactionOptions
   ): Promise<SendTransactionResult>;
 }
+
+/**
+ * Request parameters for preparing a swap
+ */
+export interface PrepareSwapRequest {
+  /** Address initiating the swap */
+  from?: Address;
+
+  /** Token address to swap from (use "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" for native token) */
+  fromToken: Address;
+
+  /** Token address to swap to (use "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" for native token) */
+  toToken: Address;
+
+  /** Minimum amount to receive (in wei/smallest unit) */
+  minimumToAmount: Hex;
+}
+
+/**
+ * Swap quote information from Alchemy's swap API
+ */
+export interface SwapQuote {
+  /** Amount being swapped from */
+  fromAmount: Hex;
+
+  /** Minimum amount to receive */
+  minimumToAmount: Hex;
+
+  /** Quote expiration timestamp (hex string) */
+  expiry: Hex;
+
+  /** Additional quote details */
+  [key: string]: unknown;
+}
+
+/**
+ * Prepared swap calls ready for signing
+ * This matches the structure returned by requestQuoteV0
+ */
+export interface PreparedSwapCalls {
+  /** Swap quote details */
+  quote?: SwapQuote;
+
+  /** Chain ID */
+  chainId?: Hex;
+
+  /** Call type */
+  type?: string;
+
+  /** Not raw calls */
+  rawCalls?: false;
+
+  /** Additional call data */
+  [key: string]: unknown;
+}
+
+/**
+ * Result of preparing a swap
+ */
+export interface PrepareSwapResult {
+  /** Swap quote information */
+  quote: SwapQuote;
+
+  /** Prepared calls ready for signing */
+  preparedCalls: PreparedSwapCalls;
+}
+
+/**
+ * Hook result for preparing swaps
+ */
+export interface UsePrepareSwapResult {
+  /** Whether the swap is being prepared */
+  isLoading: boolean;
+
+  /** Error if preparation failed */
+  error: Error | null;
+
+  /** Prepared swap data if successful */
+  data: PrepareSwapResult | null;
+
+  /** Reset the hook state */
+  reset(): void;
+
+  /** Request a swap quote and prepare calls */
+  prepareSwap(request: PrepareSwapRequest): Promise<PrepareSwapResult>;
+}
+
+/**
+ * Signed swap calls ready for submission
+ */
+export interface SignedSwapCalls {
+  /** Signed call data */
+  [key: string]: unknown;
+}
+
+/**
+ * Result of submitting a swap
+ */
+export interface SubmitSwapResult {
+  /** Transaction hash of the swap */
+  txnHash: Hash;
+}
+
+/**
+ * Hook result for submitting swaps
+ */
+export interface UseSubmitSwapResult {
+  /** Whether the swap is being submitted */
+  isLoading: boolean;
+
+  /** Error if submission failed */
+  error: Error | null;
+
+  /** Swap submission result if successful */
+  data: SubmitSwapResult | null;
+
+  /** Reset the hook state */
+  reset(): void;
+
+  /** Sign and submit prepared swap calls */
+  submitSwap(preparedCalls: PreparedSwapCalls): Promise<SubmitSwapResult>;
+}
