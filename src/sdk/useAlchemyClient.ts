@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { WalletClientSigner, type AuthorizationRequest } from "@aa-sdk/core";
 import {
   createWalletClient,
@@ -17,25 +17,77 @@ import {
 } from "@account-kit/wallet-client";
 import { alchemy } from "@account-kit/infra";
 import { useAlchemyConfig } from "./Provider";
-import { getChain } from "./getChain";
+import { getChain } from "./util/getChain";
+import { usePrivy } from "@privy-io/react-auth";
+
+/**
+ * Module-level cache for the SmartWalletClient
+ * This ensures a single client instance is shared across all components
+ */
+let cachedClient: SmartWalletClient | null = null;
+
+/**
+ * Cache key to detect if configuration has changed
+ */
+let cacheKey: string | null = null;
+
+/**
+ * Reset the cached client (useful for testing or logout scenarios)
+ * @internal
+ */
+export function resetClientCache(): void {
+  cachedClient = null;
+  cacheKey = null;
+}
 
 /**
  * Hook to get and memoize a SmartWalletClient instance
- * The client is cached and reused across renders
+ * The client is cached at the module level and shared across all hook instances
+ * Automatically clears cache on logout for proper cleanup
  *
- * @returns Object containing the smart wallet client
+ * @returns Object containing the smart wallet client getter
  *
  * @example
  * ```tsx
  * const { client } = useAlchemyClient();
+ * const smartWalletClient = await client();
  * ```
  */
 export function useAlchemyClient() {
+  const { authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const { signAuthorization } = useSignAuthorization();
   const config = useAlchemyConfig();
 
-  const clientRef = useRef<SmartWalletClient | null>(null);
+  // Track previous authenticated state to detect logout
+  const prevAuthenticatedRef = useRef(authenticated);
+  const prevWalletAddressRef = useRef(user?.wallet?.address);
+
+  // Automatically reset cache when user logs out or switches wallets
+  useEffect(() => {
+    const wasAuthenticated = prevAuthenticatedRef.current;
+    const prevWalletAddress = prevWalletAddressRef.current;
+    const currentWalletAddress = user?.wallet?.address;
+
+    // Reset cache on logout
+    if (wasAuthenticated && !authenticated) {
+      resetClientCache();
+    }
+
+    // Reset cache on wallet address change (account switching)
+    if (
+      authenticated &&
+      prevWalletAddress &&
+      currentWalletAddress &&
+      prevWalletAddress !== currentWalletAddress
+    ) {
+      resetClientCache();
+    }
+
+    // Update refs for next render
+    prevAuthenticatedRef.current = authenticated;
+    prevWalletAddressRef.current = currentWalletAddress;
+  }, [authenticated, user?.wallet?.address]);
 
   const getEmbeddedWallet = useCallback((): PrivyWallet => {
     const embedded = wallets.find((w) => w.walletClientType === "privy");
@@ -58,13 +110,25 @@ export function useAlchemyClient() {
   }, [getEmbeddedWallet]);
 
   const getClient = useCallback(async (): Promise<SmartWalletClient> => {
-    // Return cached client if available
-    if (clientRef.current) {
-      return clientRef.current;
-    }
-
     const embeddedWallet = getEmbeddedWallet();
     const chain = getEmbeddedWalletChain();
+
+    // Generate a cache key based on configuration and wallet address
+    const currentCacheKey = JSON.stringify({
+      address: embeddedWallet.address,
+      chainId: chain.id,
+      apiKey: config.apiKey,
+      jwt: config.jwt,
+      url: config.url,
+      policyId: config.policyId,
+    });
+
+    // Return cached client if configuration hasn't changed
+    if (cachedClient && cacheKey === currentCacheKey) {
+      return cachedClient;
+    }
+
+    // Configuration changed or no cache exists, create new client
     const provider = await embeddedWallet.getEthereumProvider();
 
     // Create base signer from Privy wallet
@@ -115,15 +179,18 @@ export function useAlchemyClient() {
       ? config.policyId[0]
       : config.policyId;
 
-    // Create and cache the smart wallet client
-    clientRef.current = createSmartWalletClient({
+    // Create and cache the smart wallet client at module level
+    cachedClient = createSmartWalletClient({
       chain,
       transport: alchemy(transportConfig),
       signer,
       policyId,
     });
 
-    return clientRef.current;
+    // Store the cache key
+    cacheKey = currentCacheKey;
+
+    return cachedClient;
   }, [
     getEmbeddedWallet,
     getEmbeddedWalletChain,

@@ -125,7 +125,7 @@ Provider component that configures the SDK.
 
 ### `useAlchemyClient()`
 
-Hook that returns a memoized `SmartWalletClient` instance.
+Hook that returns a memoized `SmartWalletClient` instance. The client is cached at the module level and shared across all components that use this hook.
 
 **Returns:**
 
@@ -133,6 +133,28 @@ Hook that returns a memoized `SmartWalletClient` instance.
 {
   client: () => Promise<SmartWalletClient>;
 }
+```
+
+**Caching Behavior:**
+
+- The client is cached globally at the module level (not per-component)
+- **Automatic cleanup**: Cache is automatically cleared when user logs out or switches accounts
+- Cache is automatically invalidated when configuration or wallet address changes
+- No manual cleanup required - the SDK handles it for you!
+
+### `resetClientCache()`
+
+Utility function to manually clear the cached `SmartWalletClient`. **Note: You typically don't need to call this** as the SDK automatically clears the cache on logout and account changes.
+
+This is provided for advanced use cases like testing or manual cache management.
+
+**Example:**
+
+```tsx
+import { resetClientCache } from "./sdk";
+
+// Manual cache reset (rarely needed)
+resetClientCache();
 ```
 
 ### `useAlchemySendTransaction()`
@@ -235,7 +257,8 @@ yarn build
 ## Technical Details
 
 - **No React Query**: Keeps the SDK lightweight and minimizes friction with Privy's existing patterns
-- **Client Memoization**: Smart wallet client is cached to avoid unnecessary re-creation
+- **Module-Level Caching**: Smart wallet client is cached at the module level and shared across all components, ensuring true singleton behavior without React context overhead
+- **Automatic Lifecycle Management**: Cache is automatically cleared on logout and account changes - no manual cleanup required
 - **EIP-7702 Auth**: Automatic handling of EIP-7702 authorization signatures via Privy
 - **Type Safety**: Comprehensive TypeScript types for all operations
 - **Error Handling**: Proper error propagation with detailed error messages
