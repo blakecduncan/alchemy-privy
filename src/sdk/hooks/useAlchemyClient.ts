@@ -16,8 +16,8 @@ import {
   type SmartWalletClient,
 } from "@account-kit/wallet-client";
 import { alchemy } from "@account-kit/infra";
-import { useAlchemyConfig } from "./Provider";
-import { getChain } from "./util/getChain";
+import { useAlchemyConfig } from "../Provider";
+import { getChain } from "../util/getChain";
 import { usePrivy } from "@privy-io/react-auth";
 
 /**

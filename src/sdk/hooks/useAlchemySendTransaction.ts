@@ -2,13 +2,13 @@ import { useCallback, useState } from "react";
 import { useWallets } from "@privy-io/react-auth";
 import { type Address, toHex } from "viem";
 import { useAlchemyClient } from "./useAlchemyClient";
-import { useAlchemyConfig } from "./Provider";
+import { useAlchemyConfig } from "../Provider";
 import type {
   UnsignedTransactionRequest,
   SendTransactionOptions,
   SendTransactionResult,
   UseSendTransactionResult,
-} from "./types";
+} from "../types";
 
 /**
  * Hook to send transactions with optional gas sponsorship via Alchemy

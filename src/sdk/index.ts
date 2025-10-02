@@ -2,8 +2,8 @@
 export { AlchemyProvider, useAlchemyConfig } from "./Provider";
 
 // Hooks
-export { useAlchemyClient, resetClientCache } from "./useAlchemyClient";
-export { useAlchemySendTransaction } from "./useAlchemySendTransaction";
+export { useAlchemyClient, resetClientCache } from "./hooks/useAlchemyClient";
+export { useAlchemySendTransaction } from "./hooks/useAlchemySendTransaction";
 
 // Types
 export type {
