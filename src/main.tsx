@@ -11,6 +11,7 @@ createRoot(document.getElementById("root")!).render(
     <AlchemyProvider
       apiKey={import.meta.env.VITE_ALCHEMY_API_KEY}
       policyId={import.meta.env.VITE_ALCHEMY_POLICY_ID}
+      defaultSponsored={true}
     >
       <PrivyProvider
         appId={import.meta.env.VITE_PRIVY_APP_ID}

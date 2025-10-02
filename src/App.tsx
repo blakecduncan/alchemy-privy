@@ -96,7 +96,10 @@ export default function App() {
   const [toToken, setToToken] = useState(
     "0x4200000000000000000000000000000000000006"
   );
-  const [swapAmount, setSwapAmount] = useState("0.001");
+  const [swapAmount, setSwapAmount] = useState("1");
+  const [swapAmountType, setSwapAmountType] = useState<"from" | "minimumTo">(
+    "from"
+  );
   const [preparedSwap, setPreparedSwap] = useState<PrepareSwapResult | null>(
     null
   );
@@ -234,8 +237,13 @@ export default function App() {
   };
 
   const handlePrepareSwap = async () => {
+    if (!fromToken || !isAddress(fromToken)) {
+      toast.error("Please enter a valid from token address");
+      return;
+    }
+
     if (!toToken || !isAddress(toToken)) {
-      toast.error("Please enter a valid token address");
+      toast.error("Please enter a valid to token address");
       return;
     }
 
@@ -245,10 +253,27 @@ export default function App() {
     }
 
     try {
+      let minimumToAmount: bigint;
+
+      if (swapAmountType === "from") {
+        // User entered amount to SEND - we need to calculate a reasonable minimumToAmount
+        // For now, use a small minimumToAmount (0.000001) to get a quote
+        // In production, you'd want to get a quote first to know expected output
+        minimumToAmount = parseEther("0.000001");
+      } else {
+        // User entered minimum amount to RECEIVE
+        // Determine decimals based on toToken
+        const isToTokenUsdc =
+          toToken.toLowerCase() === USDC_ADDRESS?.toLowerCase();
+        minimumToAmount = isToTokenUsdc
+          ? BigInt(Number.parseFloat(swapAmount) * 10 ** 6)
+          : parseEther(swapAmount);
+      }
+
       const result = await prepareSwap.prepareSwap({
         fromToken: fromToken as Address,
         toToken: toToken as Address,
-        minimumToAmount: `0x${parseEther(swapAmount).toString(16)}` as Hex,
+        minimumToAmount: `0x${minimumToAmount.toString(16)}` as Hex,
       });
 
       setPreparedSwap(result);
@@ -272,7 +297,7 @@ export default function App() {
 
       setPreparedSwap(null);
       setToToken("");
-      setSwapAmount("0.001");
+      setSwapAmount("1");
       prepareSwap.reset();
       submitSwap.reset();
     } catch (error) {
@@ -356,9 +381,7 @@ export default function App() {
         <div className="mx-auto max-w-7xl space-y-6">
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Dashboard
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
 
             <div className="flex items-center gap-3">
               <Label htmlFor="network-select" className="text-sm font-medium">
@@ -584,16 +607,42 @@ export default function App() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="swapAmount">Amount</Label>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="swapAmount">
+                            {swapAmountType === "from"
+                              ? "Amount to Send"
+                              : "Minimum to Receive"}
+                          </Label>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            onClick={() =>
+                              setSwapAmountType((prev) =>
+                                prev === "from" ? "minimumTo" : "from"
+                              )
+                            }
+                            className="h-auto p-1 text-xs"
+                          >
+                            Switch
+                          </Button>
+                        </div>
                         <Input
                           id="swapAmount"
                           type="number"
                           value={swapAmount}
                           onChange={(e) => setSwapAmount(e.target.value)}
-                          placeholder="0.001"
-                          step="0.001"
+                          placeholder={
+                            swapAmountType === "from" ? "1" : "0.001"
+                          }
+                          step="0.01"
                           min="0"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          {swapAmountType === "from"
+                            ? "Enter how much you want to send"
+                            : "Enter minimum amount you want to receive"}
+                        </p>
                       </div>
 
                       <Button

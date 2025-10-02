@@ -3,6 +3,7 @@ import { useWallets } from "@privy-io/react-auth";
 import { type Address } from "viem";
 import { swapActions } from "@account-kit/wallet-client/experimental";
 import { useAlchemyClient } from "./useAlchemyClient";
+import { useAlchemyConfig } from "../Provider";
 import type {
   PrepareSwapRequest,
   PrepareSwapResult,
@@ -40,6 +41,7 @@ import type {
 export function useAlchemyPrepareSwap(): UsePrepareSwapResult {
   const { wallets } = useWallets();
   const { client: getClient } = useAlchemyClient();
+  const config = useAlchemyConfig();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -67,12 +69,32 @@ export function useAlchemyPrepareSwap(): UsePrepareSwapResult {
         // Extend client with swap actions
         const swapClient = client.extend(swapActions);
 
-        // Request the swap quote (returnRawCalls defaults to false)
+        // Determine if swap should be sponsored
+        const hasPolicyId = !!config.policyId;
+        const defaultSponsored = config.defaultSponsored ?? true;
+        const shouldSponsor = hasPolicyId && defaultSponsored;
+
+        // Build capabilities for gas sponsorship
+        const policyId = Array.isArray(config.policyId)
+          ? config.policyId[0]
+          : config.policyId;
+
+        const capabilities: {
+          eip7702Auth: true;
+          paymasterService?: { policyId: string };
+        } = { eip7702Auth: true };
+
+        if (shouldSponsor && policyId) {
+          capabilities.paymasterService = { policyId };
+        }
+
+        // Request the swap quote with gas sponsorship capabilities
         const response = await swapClient.requestQuoteV0({
           from: request.from || (embeddedWallet.address as Address),
           fromToken: request.fromToken,
           toToken: request.toToken,
           minimumToAmount: request.minimumToAmount,
+          capabilities,
         });
 
         // Extract quote and calls
@@ -101,7 +123,7 @@ export function useAlchemyPrepareSwap(): UsePrepareSwapResult {
         setIsLoading(false);
       }
     },
-    [getClient, getEmbeddedWallet]
+    [getClient, getEmbeddedWallet, config]
   );
 
   const reset = useCallback(() => {

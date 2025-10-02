@@ -56,6 +56,7 @@ export function useAlchemySubmitSwap(): UseSubmitSwapResult {
         const swapClient = client.extend(swapActions);
 
         // Sign the prepared calls
+        // Note: Gas sponsorship must be configured during the prepare step
         // Type assertion is needed because our PreparedSwapCalls interface
         // is intentionally flexible to accommodate the SDK's response structure
         const signedCalls = await swapClient.signPreparedCalls(
