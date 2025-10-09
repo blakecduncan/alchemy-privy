@@ -6,7 +6,7 @@ import {
   useAlchemyPrepareSwap,
   useAlchemySubmitSwap,
   type PrepareSwapResult,
-} from "./sdk";
+} from "@account-kit/privy-integration";
 import {
   createPublicClient,
   http,
@@ -63,7 +63,7 @@ export default function App() {
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
   const [wethBalance, setWethBalance] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [currentChain, setCurrentChain] = useState<number>(baseSepolia.id);
+  const [currentChain, setCurrentChain] = useState<number | null>(null);
   const [isSwitchingChain, setIsSwitchingChain] = useState(false);
 
   // Token addresses - chain specific
@@ -81,8 +81,12 @@ export default function App() {
     },
   };
 
-  const USDC_ADDRESS = TOKEN_ADDRESSES[currentChain]?.USDC;
-  const WETH_ADDRESS = TOKEN_ADDRESSES[currentChain]?.WETH;
+  const USDC_ADDRESS = currentChain
+    ? TOKEN_ADDRESSES[currentChain]?.USDC
+    : undefined;
+  const WETH_ADDRESS = currentChain
+    ? TOKEN_ADDRESSES[currentChain]?.WETH
+    : undefined;
 
   // Send transaction form state
   const [recipientAddress, setRecipientAddress] = useState("");
@@ -108,10 +112,30 @@ export default function App() {
   const { login } = useLogin();
   const disableLogin = !ready || (ready && authenticated);
 
+  // Sync UI state with wallet's actual chain on mount
+  useEffect(() => {
+    if (!authenticated || wallets.length === 0) return;
+
+    const wallet = wallets.find((w) => w.walletClientType === "privy");
+    if (!wallet) return;
+
+    // Get wallet's current chain
+    const walletChainIdStr = wallet.chainId?.toString();
+    const walletChainId = walletChainIdStr?.includes(":")
+      ? Number(walletChainIdStr.split(":")[1])
+      : Number(walletChainIdStr);
+
+    // Initialize UI state to match wallet's actual chain
+    if (currentChain === null || currentChain !== walletChainId) {
+      console.log(`Syncing UI to wallet's current chain: ${walletChainId}`);
+      setCurrentChain(walletChainId);
+    }
+  }, [authenticated, wallets, currentChain]);
+
   // Fetch balances when authenticated or chain changes
   useEffect(() => {
     const fetchBalances = async () => {
-      if (!authenticated || !user?.wallet?.address) {
+      if (!authenticated || !user?.wallet?.address || currentChain === null) {
         setBalance(null);
         setUsdcBalance(null);
         setWethBalance(null);
@@ -121,7 +145,7 @@ export default function App() {
       setIsLoadingBalance(true);
       try {
         const chain = currentChain === base.id ? base : baseSepolia;
-        console.log("chain", chain);
+        console.log("Fetching balances on chain:", chain.id, chain.name);
         const publicClient = createPublicClient({
           chain,
           transport: http(),
@@ -271,6 +295,7 @@ export default function App() {
       }
 
       const result = await prepareSwap.prepareSwap({
+        from: user?.wallet?.address as Address,
         fromToken: fromToken as Address,
         toToken: toToken as Address,
         minimumToAmount: `0x${minimumToAmount.toString(16)}` as Hex,
@@ -292,7 +317,7 @@ export default function App() {
     if (!preparedSwap) return;
 
     try {
-      const result = await submitSwap.submitSwap(preparedSwap.preparedCalls);
+      const result = await submitSwap.submitSwap(preparedSwap);
       toast.success(`Swap successful! Transaction: ${result.txnHash}`);
 
       setPreparedSwap(null);
@@ -326,7 +351,10 @@ export default function App() {
     const numChainId = Number(chainId);
     setIsSwitchingChain(true);
     try {
+      console.log(`Switching wallet and UI to chain ${numChainId}`);
+      // Switch the wallet first
       await wallet.switchChain(numChainId);
+      // Then update UI state to match
       setCurrentChain(numChainId);
       toast.success(
         `Successfully switched to ${
@@ -388,12 +416,14 @@ export default function App() {
                 Network
               </Label>
               <Select
-                value={currentChain.toString()}
+                value={
+                  currentChain !== null ? currentChain.toString() : undefined
+                }
                 onValueChange={handleChainSwitch}
-                disabled={isSwitchingChain}
+                disabled={isSwitchingChain || currentChain === null}
               >
                 <SelectTrigger id="network-select" className="w-[180px]">
-                  <SelectValue />
+                  <SelectValue placeholder="Loading..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={baseSepolia.id.toString()}>
