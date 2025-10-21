@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,13 +19,7 @@ import {
   useAlchemyClient,
   type PrepareSwapResult,
 } from "@account-kit/privy-integration";
-import {
-  formatEther,
-  formatUnits,
-  parseEther,
-  type Address,
-  type Hex,
-} from "viem";
+import { formatEther, formatUnits, type Address, type Hex } from "viem";
 import { base } from "viem/chains";
 import type { User } from "@privy-io/react-auth";
 import { AlertCircle } from "lucide-react";
@@ -37,9 +31,10 @@ const USDC_ADDRESS_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 interface TokenSwapProps {
   user: User | null;
   currentChain: number | null;
+  onSuccess?: () => void;
 }
 
-export function TokenSwap({ user, currentChain }: TokenSwapProps) {
+export function TokenSwap({ currentChain, onSuccess }: TokenSwapProps) {
   const prepareSwap = useAlchemyPrepareSwap();
   const submitSwap = useAlchemySubmitSwap();
   const { getClient } = useAlchemyClient();
@@ -61,11 +56,11 @@ export function TokenSwap({ user, currentChain }: TokenSwapProps) {
       const fromToken = ethToUsdc ? ETH_ADDRESS : USDC_ADDRESS_BASE;
       const toToken = ethToUsdc ? USDC_ADDRESS_BASE : ETH_ADDRESS;
 
-      // Use a small minimumToAmount to get a quote
-      // In production, you'd calculate this based on slippage tolerance
-      const minimumToAmount = ethToUsdc
-        ? BigInt(1) // 1 USDC base unit (0.000001 USDC)
-        : parseEther("0.000001"); // Small ETH amount
+      // Calculate the actual amount to swap based on user input and token decimals
+      const fromDecimals = ethToUsdc ? 18 : 6;
+      const amountInSmallestUnit = BigInt(
+        Number.parseFloat(swapAmount) * 10 ** fromDecimals
+      );
 
       const { account } = await getClient();
       const fromAddress = account.address;
@@ -74,7 +69,7 @@ export function TokenSwap({ user, currentChain }: TokenSwapProps) {
         from: fromAddress,
         fromToken: fromToken as Address,
         toToken: toToken as Address,
-        minimumToAmount: `0x${minimumToAmount.toString(16)}` as Hex,
+        fromAmount: `0x${amountInSmallestUnit.toString(16)}` as Hex,
       });
 
       setPreparedSwap(result);
@@ -100,6 +95,11 @@ export function TokenSwap({ user, currentChain }: TokenSwapProps) {
       setSwapAmount("0.01");
       prepareSwap.reset();
       submitSwap.reset();
+
+      // Trigger balance refresh
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Swap failed:", error);
       toast.error(

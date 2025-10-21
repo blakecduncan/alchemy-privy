@@ -34,6 +34,7 @@ export default function App() {
 
   const [currentChain, setCurrentChain] = useState<number | null>(null);
   const [isSwitchingChain, setIsSwitchingChain] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Token addresses - chain specific
   const TOKEN_ADDRESSES: Record<number, string | undefined> = {
@@ -223,6 +224,7 @@ export default function App() {
                 currentChain={currentChain}
                 usdcAddress={USDC_ADDRESS}
                 onLogout={logout}
+                refreshTrigger={refreshTrigger}
               />
             </div>
 
@@ -292,7 +294,11 @@ export default function App() {
               </Card>
 
               {/* Token Swap Card */}
-              <TokenSwap user={user} currentChain={currentChain} />
+              <TokenSwap
+                user={user}
+                currentChain={currentChain}
+                onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+              />
             </div>
           </div>
         </div>

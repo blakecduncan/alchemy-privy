@@ -31,6 +31,7 @@ interface AccountInfoProps {
   currentChain: number | null;
   usdcAddress: string | undefined;
   onLogout: () => void;
+  refreshTrigger?: number;
 }
 
 export function AccountInfo({
@@ -39,6 +40,7 @@ export function AccountInfo({
   currentChain,
   usdcAddress,
   onLogout,
+  refreshTrigger,
 }: AccountInfoProps) {
   const { getClient } = useAlchemyClient();
   const [smartWalletAddress, setSmartWalletAddress] = useState<string | null>(
@@ -132,6 +134,7 @@ export function AccountInfo({
     user?.wallet?.address,
     currentChain,
     usdcAddress,
+    refreshTrigger,
   ]);
   return (
     <Card>
