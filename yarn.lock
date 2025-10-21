@@ -2,111 +2,61 @@
 # yarn lockfile v1
 
 
-"@aa-sdk/core@^4.65.0":
-  version "4.65.0"
-  resolved "https://registry.yarnpkg.com/@aa-sdk/core/-/core-4.65.0.tgz#6bcb5ffe0af2d3a45aa8b75c7fa9ed36c50c73a6"
-  integrity sha512-osG+fWDxMfOuFQU1DOcIMBZvKsGRS3VcFi9QgyV0lanGkRc5uksJ5MTkYjoH2XS39OrKKZGewAflqg4qzPMidw==
+"@aa-sdk/core@4.74.0", "@aa-sdk/core@^4.74.0":
+  version "4.74.0"
+  resolved "https://registry.yarnpkg.com/@aa-sdk/core/-/core-4.74.0.tgz#37d7ee3ea5109255c17ba15f9f908d749225973a"
+  integrity sha512-V3sGxhWjge5xhnnSyJjrN57YTAD0NdyUeCe9axydEncGW81aULZ1KlXTZhRdnrTFHe2vkcjUu9t4jtRtDM7LDQ==
   dependencies:
     abitype "^0.8.3"
     eventemitter3 "^5.0.1"
     zod "^3.22.4"
 
-"@aa-sdk/core@^4.68.0":
-  version "4.68.0"
-  resolved "https://registry.yarnpkg.com/@aa-sdk/core/-/core-4.68.0.tgz#9442f1dfa65c201ca944f055faafa151bdd8ac15"
-  integrity sha512-m9Cs+5/Y2IdHIcxcN8evvXTtNbTzotqTeXqbNVPYZqBS3tGRUBdMtROZIgYb4IwyFMOA27saHJKwDcaRpkzn8w==
+"@account-kit/infra@4.74.0", "@account-kit/infra@^4.74.0":
+  version "4.74.0"
+  resolved "https://registry.yarnpkg.com/@account-kit/infra/-/infra-4.74.0.tgz#0c12ee173b871fa6dc59a10914a39e31e3a25484"
+  integrity sha512-AGcX53BXEBpTj0l5JGgKxEtkW309O+QSrZ/o3iQZ9GHFnDhumj/9qP7U+QsBZvBW0Cu3CJHKBL9O6VN4bYUevw==
   dependencies:
-    abitype "^0.8.3"
-    eventemitter3 "^5.0.1"
-    zod "^3.22.4"
-
-"@account-kit/infra@^4.65.0":
-  version "4.65.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/infra/-/infra-4.65.0.tgz#566af923220f0c7f8f1f7ce1f9bb8a15062129a8"
-  integrity sha512-ZiiX4HwKLAl0j6qzILQsq8HSPKWIrGTWpdF5uajg1olGADui9NDgl16sDfjLzneihj/sXSlVZJmMM7j0xsO+4g==
-  dependencies:
-    "@aa-sdk/core" "^4.65.0"
-    "@account-kit/logging" "^4.65.0"
+    "@aa-sdk/core" "^4.74.0"
+    "@account-kit/logging" "^4.74.0"
     eventemitter3 "^5.0.1"
     zod "^3.22.4"
   optionalDependencies:
     alchemy-sdk "^3.0.0"
 
-"@account-kit/infra@^4.68.0":
-  version "4.68.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/infra/-/infra-4.68.0.tgz#82fc5696486afddeb29cc0afa061256654576799"
-  integrity sha512-EOh95KSmRYb9y4mQRsMNPTH+OffdrwSK9ss6YJlO3TuoLmGs7gqzLgYaGUryfHNVY5zXOVTlIOoE7mKcnxflqQ==
-  dependencies:
-    "@aa-sdk/core" "^4.68.0"
-    "@account-kit/logging" "^4.68.0"
-    eventemitter3 "^5.0.1"
-    zod "^3.22.4"
-  optionalDependencies:
-    alchemy-sdk "^3.0.0"
-
-"@account-kit/logging@^4.65.0":
-  version "4.65.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/logging/-/logging-4.65.0.tgz#219516b0e12d4790511a68af2df5407b569b44fa"
-  integrity sha512-a7oBiQWlPoCmDDwgvHkMDlgmuMf6TeAj52b4EjLX6LOYwVhDeaXEuSqlQnMjj2fNC+phqMQnHtBJzZMM1sAang==
+"@account-kit/logging@^4.74.0":
+  version "4.74.0"
+  resolved "https://registry.yarnpkg.com/@account-kit/logging/-/logging-4.74.0.tgz#0c33c3f302b371944c58ee027efce835c5bb33bd"
+  integrity sha512-tBaOaXe81pzhK+KNsFSvxOKyRnhUgRw7uivFglaM7qeAuXUeGElfxk2WTiiiEpH88M2s/z8rZG5atymvi4NNig==
   dependencies:
     "@segment/analytics-next" "1.74.0"
     uuid "^11.0.2"
 
-"@account-kit/logging@^4.68.0":
-  version "4.68.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/logging/-/logging-4.68.0.tgz#b6c02fdecaa4c8c35d64760b9d2b6948fc8bef7a"
-  integrity sha512-GA+M7yi8LYyhmxTB9yKI52CChRsa2B2xyGWbuSYlREyjczGffvDHuEOP7hXzSAH8i5nVIKJJMsZ7l5TMnTv/VA==
+"@account-kit/privy-integration@4.74.0":
+  version "4.74.0"
+  resolved "https://registry.yarnpkg.com/@account-kit/privy-integration/-/privy-integration-4.74.0.tgz#140ec79cd5d5819ca2bcf2c073015c715d2bee52"
+  integrity sha512-X4JiMxKkDHAsQnhs7M90rR2unNEM4QMa2nkOE0C0CqIHWjnUEJkCsjbni8Qed+J27xjKsrn2Z5HmQACAroGiRg==
   dependencies:
-    "@segment/analytics-next" "1.74.0"
-    uuid "^11.0.2"
+    "@account-kit/infra" "^4.74.0"
+    "@account-kit/wallet-client" "^4.74.0"
 
-"@account-kit/privy-integration@^4.68.0":
-  version "4.68.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/privy-integration/-/privy-integration-4.68.0.tgz#528e25e1731306e916fc056732ee69c5134de3f9"
-  integrity sha512-Yle6tN+fH1oFcGkGqHVVCZctslDIK9AyXZFbNK/K4XZoq1gfmd03DL0i9OMlhJA4Tl84+6iSB9hERfv2zZeEoQ==
+"@account-kit/smart-contracts@^4.74.0":
+  version "4.74.0"
+  resolved "https://registry.yarnpkg.com/@account-kit/smart-contracts/-/smart-contracts-4.74.0.tgz#31740440557468a13692f377366ec86844fb6ce3"
+  integrity sha512-h2KGSuxV+kA6uUkyHJ4BvofokHJLufRSrP/mhJNjJydohGf21sSvZKpYE9T1egwP5DRsc3HOzmLFgy9QMgZ4hw==
   dependencies:
-    "@account-kit/infra" "^4.68.0"
-    "@account-kit/wallet-client" "^4.68.0"
-
-"@account-kit/smart-contracts@^4.65.0":
-  version "4.65.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/smart-contracts/-/smart-contracts-4.65.0.tgz#ccd010e4efdf843b70601413ae926c07d135c597"
-  integrity sha512-fESuA0AWtnQ0xlYKUGPLZ2y6OS2S0aPYaUbFYrdHTsm5RPyf4/ah5LB0Mumb6pH9ienFI1pi5YpRLAch+AOCLw==
-  dependencies:
-    "@aa-sdk/core" "^4.65.0"
-    "@account-kit/infra" "^4.65.0"
+    "@aa-sdk/core" "^4.74.0"
+    "@account-kit/infra" "^4.74.0"
     webauthn-p256 "^0.0.10"
 
-"@account-kit/smart-contracts@^4.68.0":
-  version "4.68.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/smart-contracts/-/smart-contracts-4.68.0.tgz#f29f301def56877310cd8ceeff477e22e2c4fffe"
-  integrity sha512-GVgZHhEvv3M1uoZvet7hSMszxNxJZOMci+ewwTngUk0ALOjZNTrTQ82h4i0RnGqsvwLyaIjv97+kGAX1xtAQ2Q==
+"@account-kit/wallet-client@4.74.0", "@account-kit/wallet-client@^4.74.0":
+  version "4.74.0"
+  resolved "https://registry.yarnpkg.com/@account-kit/wallet-client/-/wallet-client-4.74.0.tgz#35f60b16375a5e6d678b217c1a2f29c1a9742227"
+  integrity sha512-nJ8W0zNFMdlknsYQKvtFnonkxQrXz5KukevjWDaMwaL+4pcl6mVMd1FZ4LOxx9SQ45hQ/OQiOg2GhevV0P95Rw==
   dependencies:
-    "@aa-sdk/core" "^4.68.0"
-    "@account-kit/infra" "^4.68.0"
-    webauthn-p256 "^0.0.10"
-
-"@account-kit/wallet-client@^4.65.0":
-  version "4.65.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/wallet-client/-/wallet-client-4.65.0.tgz#4e16faa8ed5b9a5052fbd4bc3aefd8ee6f8d1633"
-  integrity sha512-K8putT3KaQ02Lu6V2jFJXwo1OoXgz/KhoUgby4rZiChge+nCXugE0gEb5bcr+dMHceRoJFCR2Xegz3rfVy7LSA==
-  dependencies:
-    "@aa-sdk/core" "^4.65.0"
-    "@account-kit/infra" "^4.65.0"
-    "@account-kit/smart-contracts" "^4.65.0"
-    "@alchemy/wallet-api-types" "0.1.0-alpha.16"
-    deep-equal "^2.2.3"
-    ox "^0.6.12"
-
-"@account-kit/wallet-client@^4.68.0":
-  version "4.68.0"
-  resolved "https://registry.yarnpkg.com/@account-kit/wallet-client/-/wallet-client-4.68.0.tgz#dbacd6264d542d04834c61a9141ef5eb7d729adc"
-  integrity sha512-LhCzO/g4iXVpKMldHgdnXXH9dc9/NrPywZ/KFSeJ6/WmTiTdZsgerCqytGuPbHFhwpjTYdh68UP7WpS4Fv5ZJA==
-  dependencies:
-    "@aa-sdk/core" "^4.68.0"
-    "@account-kit/infra" "^4.68.0"
-    "@account-kit/smart-contracts" "^4.68.0"
-    "@alchemy/wallet-api-types" "0.1.0-alpha.16"
+    "@aa-sdk/core" "^4.74.0"
+    "@account-kit/infra" "^4.74.0"
+    "@account-kit/smart-contracts" "^4.74.0"
+    "@alchemy/wallet-api-types" "0.1.0-alpha.17"
     deep-equal "^2.2.3"
     ox "^0.6.12"
 
@@ -120,10 +70,10 @@
   resolved "https://registry.yarnpkg.com/@adraffy/ens-normalize/-/ens-normalize-1.11.1.tgz#6c2d657d4b2dfb37f8ea811dcb3e60843d4ac24a"
   integrity sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==
 
-"@alchemy/wallet-api-types@0.1.0-alpha.16":
-  version "0.1.0-alpha.16"
-  resolved "https://registry.yarnpkg.com/@alchemy/wallet-api-types/-/wallet-api-types-0.1.0-alpha.16.tgz#fab9908f22e37283b611cf2c08989e5a20632d91"
-  integrity sha512-hpBCyyYHvPSzXwYqNwpcvXyhovUCFXrwFk7+bvD+buHiGZUfld3/WTzXN64rVhOeU7u4psGUdQaKUuAgmNjiNg==
+"@alchemy/wallet-api-types@0.1.0-alpha.17":
+  version "0.1.0-alpha.17"
+  resolved "https://registry.yarnpkg.com/@alchemy/wallet-api-types/-/wallet-api-types-0.1.0-alpha.17.tgz#3ee54301712d31b31f8e59a812fb6c1bb7d786f5"
+  integrity sha512-ekweIMT8iQ7aDpdieOBW2ASop06kfkZ0+JGcckVfbwqombju0tp7IX1pGj+FihAQxM9R7VerVVHErBatbOnPQQ==
   dependencies:
     "@sinclair/typebox" "^0.34.33"
     deep-equal "^2.2.3"

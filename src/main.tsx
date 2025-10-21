@@ -24,6 +24,7 @@ createRoot(document.getElementById("root")!).render(
       <AlchemyProvider
         apiKey={import.meta.env.VITE_ALCHEMY_API_KEY}
         policyId={import.meta.env.VITE_ALCHEMY_POLICY_ID}
+        accountAuthMode="owner"
       >
         <App />
       </AlchemyProvider>
